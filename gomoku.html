@@ -83,7 +83,9 @@
 
     let board = Array.from({ length: size }, () => Array(size).fill(0));
     let currentPlayer = 1;
+    const botPlayer = 2;
     let gameOver = false;
+    let botThinking = false;
 
     function drawBoard() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -169,6 +171,122 @@
       return board.every((line) => line.every((v) => v !== 0));
     }
 
+    function findLineLength(row, col, dr, dc, player) {
+      let count = 0;
+      let r = row + dr;
+      let c = col + dc;
+      while (inBounds(r, c) && board[r][c] === player) {
+        count++;
+        r += dr;
+        c += dc;
+      }
+      return count;
+    }
+
+    function evaluateMove(row, col, player) {
+      const dirs = [
+        [1, 0],
+        [0, 1],
+        [1, 1],
+        [1, -1],
+      ];
+
+      let bestLine = 0;
+      let total = 0;
+      for (const [dr, dc] of dirs) {
+        const len = 1 + findLineLength(row, col, dr, dc, player) + findLineLength(row, col, -dr, -dc, player);
+        bestLine = Math.max(bestLine, len);
+        total += len * len;
+      }
+
+      let distanceBias = 0;
+      const center = (size - 1) / 2;
+      distanceBias = -Math.abs(row - center) - Math.abs(col - center);
+
+      return total + bestLine * 10 + distanceBias;
+    }
+
+    function chooseBotMove() {
+      const emptyCells = [];
+      for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+          if (board[r][c] === 0) emptyCells.push({ row: r, col: c });
+        }
+      }
+
+      for (const cellPos of emptyCells) {
+        const { row, col } = cellPos;
+        board[row][col] = botPlayer;
+        if (checkWin(row, col, botPlayer)) {
+          board[row][col] = 0;
+          return cellPos;
+        }
+        board[row][col] = 0;
+      }
+
+      for (const cellPos of emptyCells) {
+        const { row, col } = cellPos;
+        board[row][col] = 1;
+        if (checkWin(row, col, 1)) {
+          board[row][col] = 0;
+          return cellPos;
+        }
+        board[row][col] = 0;
+      }
+
+      let bestMove = null;
+      let bestScore = -Infinity;
+      for (const { row, col } of emptyCells) {
+        const botScore = evaluateMove(row, col, botPlayer);
+        const blockScore = evaluateMove(row, col, 1) * 0.9;
+        const score = botScore + blockScore;
+        if (score > bestScore) {
+          bestScore = score;
+          bestMove = { row, col };
+        }
+      }
+
+      return bestMove;
+    }
+
+    function finishTurn(row, col, player) {
+      if (checkWin(row, col, player)) {
+        statusEl.textContent = player === 1 ? '你赢了！' : '机器人获胜！';
+        gameOver = true;
+        return;
+      }
+
+      if (checkDraw()) {
+        statusEl.textContent = '平局！';
+        gameOver = true;
+        return;
+      }
+
+      currentPlayer = currentPlayer === 1 ? 2 : 1;
+      if (currentPlayer === botPlayer) {
+        statusEl.textContent = '机器人思考中...';
+      } else {
+        statusEl.textContent = '轮到你（黑棋）';
+      }
+    }
+
+    function botMove() {
+      if (gameOver || currentPlayer !== botPlayer) return;
+
+      botThinking = true;
+      const move = chooseBotMove();
+      if (!move) {
+        botThinking = false;
+        return;
+      }
+
+      const { row, col } = move;
+      board[row][col] = botPlayer;
+      drawBoard();
+      finishTurn(row, col, botPlayer);
+      botThinking = false;
+    }
+
     function getCellFromEvent(event) {
       const rect = canvas.getBoundingClientRect();
       const scaleX = canvas.width / rect.width;
@@ -182,7 +300,7 @@
     }
 
     function placeStone(event) {
-      if (gameOver) return;
+      if (gameOver || currentPlayer === botPlayer || botThinking) return;
       const pos = getCellFromEvent(event);
       if (!pos) return;
       const { row, col } = pos;
@@ -190,28 +308,19 @@
 
       board[row][col] = currentPlayer;
       drawBoard();
+      finishTurn(row, col, currentPlayer);
 
-      if (checkWin(row, col, currentPlayer)) {
-        statusEl.textContent = currentPlayer === 1 ? '黑棋获胜！' : '白棋获胜！';
-        gameOver = true;
-        return;
+      if (!gameOver && currentPlayer === botPlayer) {
+        setTimeout(botMove, 220);
       }
-
-      if (checkDraw()) {
-        statusEl.textContent = '平局！';
-        gameOver = true;
-        return;
-      }
-
-      currentPlayer = currentPlayer === 1 ? 2 : 1;
-      statusEl.textContent = currentPlayer === 1 ? '轮到黑棋' : '轮到白棋';
     }
 
     function restart() {
       board = Array.from({ length: size }, () => Array(size).fill(0));
       currentPlayer = 1;
       gameOver = false;
-      statusEl.textContent = '黑棋先手';
+      botThinking = false;
+      statusEl.textContent = '你先手（黑棋）';
       drawBoard();
     }
 
