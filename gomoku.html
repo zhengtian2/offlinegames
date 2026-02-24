@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>简单五子棋</title>
+  <style>
+    :root {
+      font-family: "Noto Sans SC", "Microsoft YaHei", Arial, sans-serif;
+      color: #1f2937;
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: #f3f4f6;
+    }
+    .game {
+      background: #fff;
+      padding: 1rem 1.25rem;
+      border-radius: 14px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+      text-align: center;
+      width: min(95vw, 560px);
+    }
+    h1 {
+      margin: 0.2rem 0 0.8rem;
+      font-size: 1.4rem;
+    }
+    #status {
+      margin: 0.5rem 0 1rem;
+      font-weight: 600;
+      min-height: 1.2em;
+    }
+    canvas {
+      width: min(92vw, 500px);
+      height: min(92vw, 500px);
+      background: #ddb66d;
+      border-radius: 8px;
+      border: 2px solid #8b5a2b;
+      cursor: pointer;
+      touch-action: none;
+    }
+    .controls {
+      margin-top: 0.85rem;
+      display: flex;
+      justify-content: center;
+      gap: 0.75rem;
+    }
+    button {
+      border: none;
+      border-radius: 8px;
+      background: #2563eb;
+      color: #fff;
+      padding: 0.45rem 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #1d4ed8;
+    }
+  </style>
+</head>
+<body>
+  <main class="game">
+    <h1>简单五子棋</h1>
+    <p id="status">黑棋先手</p>
+    <canvas id="board" width="500" height="500" aria-label="五子棋棋盘"></canvas>
+    <div class="controls">
+      <button id="restart">重新开始</button>
+    </div>
+  </main>
+
+  <script>
+    const size = 15;
+    const cell = 32;
+    const padding = 26;
+    const canvas = document.getElementById('board');
+    const ctx = canvas.getContext('2d');
+    const statusEl = document.getElementById('status');
+    const restartBtn = document.getElementById('restart');
+
+    let board = Array.from({ length: size }, () => Array(size).fill(0));
+    let currentPlayer = 1;
+    let gameOver = false;
+
+    function drawBoard() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let i = 0; i < size; i++) {
+        const offset = padding + i * cell;
+
+        ctx.beginPath();
+        ctx.moveTo(padding, offset);
+        ctx.lineTo(padding + cell * (size - 1), offset);
+        ctx.strokeStyle = '#7a5428';
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(offset, padding);
+        ctx.lineTo(offset, padding + cell * (size - 1));
+        ctx.stroke();
+      }
+
+      for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+          if (board[r][c] !== 0) drawStone(r, c, board[r][c]);
+        }
+      }
+    }
+
+    function drawStone(row, col, player) {
+      const x = padding + col * cell;
+      const y = padding + row * cell;
+      ctx.beginPath();
+      ctx.arc(x, y, cell * 0.4, 0, Math.PI * 2);
+      if (player === 1) {
+        const grad = ctx.createRadialGradient(x - 5, y - 5, 2, x, y, cell * 0.4);
+        grad.addColorStop(0, '#666');
+        grad.addColorStop(1, '#111');
+        ctx.fillStyle = grad;
+      } else {
+        const grad = ctx.createRadialGradient(x - 5, y - 5, 2, x, y, cell * 0.4);
+        grad.addColorStop(0, '#fff');
+        grad.addColorStop(1, '#ddd');
+        ctx.fillStyle = grad;
+      }
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+      ctx.stroke();
+    }
+
+    function inBounds(r, c) {
+      return r >= 0 && c >= 0 && r < size && c < size;
+    }
+
+    function checkWin(row, col, player) {
+      const dirs = [
+        [1, 0],
+        [0, 1],
+        [1, 1],
+        [1, -1],
+      ];
+
+      for (const [dr, dc] of dirs) {
+        let count = 1;
+        let r = row + dr;
+        let c = col + dc;
+        while (inBounds(r, c) && board[r][c] === player) {
+          count++;
+          r += dr;
+          c += dc;
+        }
+
+        r = row - dr;
+        c = col - dc;
+        while (inBounds(r, c) && board[r][c] === player) {
+          count++;
+          r -= dr;
+          c -= dc;
+        }
+
+        if (count >= 5) return true;
+      }
+      return false;
+    }
+
+    function checkDraw() {
+      return board.every((line) => line.every((v) => v !== 0));
+    }
+
+    function getCellFromEvent(event) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const x = (event.clientX - rect.left) * scaleX;
+      const y = (event.clientY - rect.top) * scaleY;
+      const col = Math.round((x - padding) / cell);
+      const row = Math.round((y - padding) / cell);
+      if (!inBounds(row, col)) return null;
+      return { row, col };
+    }
+
+    function placeStone(event) {
+      if (gameOver) return;
+      const pos = getCellFromEvent(event);
+      if (!pos) return;
+      const { row, col } = pos;
+      if (board[row][col] !== 0) return;
+
+      board[row][col] = currentPlayer;
+      drawBoard();
+
+      if (checkWin(row, col, currentPlayer)) {
+        statusEl.textContent = currentPlayer === 1 ? '黑棋获胜！' : '白棋获胜！';
+        gameOver = true;
+        return;
+      }
+
+      if (checkDraw()) {
+        statusEl.textContent = '平局！';
+        gameOver = true;
+        return;
+      }
+
+      currentPlayer = currentPlayer === 1 ? 2 : 1;
+      statusEl.textContent = currentPlayer === 1 ? '轮到黑棋' : '轮到白棋';
+    }
+
+    function restart() {
+      board = Array.from({ length: size }, () => Array(size).fill(0));
+      currentPlayer = 1;
+      gameOver = false;
+      statusEl.textContent = '黑棋先手';
+      drawBoard();
+    }
+
+    canvas.addEventListener('click', placeStone);
+    restartBtn.addEventListener('click', restart);
+    drawBoard();
+  </script>
+</body>
+</html>
