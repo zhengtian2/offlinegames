@@ -1,0 +1,44 @@
+PRIVACY POLICY - Real Estate AI Analyzer (QLD)
+
+Last Updated: [16/Mar/2026]
+
+### Data Collection
+REAhelper collects and processes the following user data:
+- Real estate property listings and addresses
+- Land valuation search queries
+- Flood risk assessment queries
+- User analysis results and preferences
+- Browser history related to property searches (on realestate.com.au, qld.gov.au, fam.brisbane.qld.gov.au)
+
+### Data Storage
+- All data is stored **locally on your device** using Chrome's storage API
+- No data is sent to external servers or third parties
+- Analysis history is retained for 10 recent queries maximum
+- All data persists only in your browser's local storage
+
+### Permissions Usage
+- **activeTab**: To access the currently viewed real estate property page
+- **storage**: To save user preferences and analysis history locally
+- **scripting**: To extract property data from web pages
+- **sidePanel**: To display the analysis interface
+- **Host Permissions** (realestate.com.au, qld.gov.au, fam.brisbane.qld.gov.au): To access property listings and government land/flood data
+
+### Data Security
+- Data is never transmitted over the network
+- You can clear all stored data by clearing browser history/cache
+- Manual delete options available in the extension for history and logs
+
+### Third-Party Data
+When you use the QLD Land Valuation or Brisbane FAM features, your searches are temporarily sent to those government websites. Please refer to their privacy policies:
+- Queensland Government: https://www.qld.gov.au/
+- Brisbane City Council: https://www.brisbane.qld.gov.au/
+
+### User Control
+Users can:
+- Enable/disable land valuation lookups (setting: useLandValue)
+- Enable/disable flood assessment lookups (setting: useBrisbaneFam)
+- Clear analysis history at any time
+- Clear browser cache to remove all stored data
+
+### Contact
+myreceipt2020@gmail.com
